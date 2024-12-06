@@ -9,6 +9,7 @@ import (
 	"github.com/aimbot1526/mindaro-vsdk/db"
 	"github.com/aimbot1526/mindaro-vsdk/handlers"
 	"github.com/aimbot1526/mindaro-vsdk/repositories"
+	"github.com/aimbot1526/mindaro-vsdk/webrtc"
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 )
@@ -26,6 +27,7 @@ func StartServer() *Server {
 
 	// Initialize database
 	db := db.InitializeDB()
+	sfu := webrtc.NewSFU()
 
 	// Initialize repositories
 	userRepo := repositories.NewUserRepository(db)
@@ -37,6 +39,8 @@ func StartServer() *Server {
 	groupHandler := handlers.NewGroupHandler(groupRepo)
 	messageHandler := handlers.NewMessageHandler(messageRepo)
 	websocketHandler := handlers.NewWebSocketHandler(groupRepo, messageRepo)
+	voiceHandler := handlers.NewVoiceHandler(sfu, db)
+	videoHandler := handlers.NewVideoHandler(sfu, db)
 
 	// Initialize router and setup routes
 	router := mux.NewRouter()
@@ -54,6 +58,8 @@ func StartServer() *Server {
 
 	// WebSocket route for group chat
 	router.HandleFunc("/ws/group", websocketHandler.GroupWebSocketHandler)
+	router.HandleFunc("/ws/group/video", videoHandler.HandleVoiceCall)
+	router.HandleFunc("/ws/group/voice", voiceHandler.HandleVoiceCall)
 
 	// Create HTTP server
 	httpSrv := &http.Server{
